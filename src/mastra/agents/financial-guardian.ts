@@ -25,7 +25,8 @@ export const financialGuardian = new Agent({
     Format numbers as currency with $ and round to whole numbers for readability.
     Always think in terms of "runway" -- how many days of spending power remain.
   `,
-  model: 'openrouter/anthropic/claude-sonnet-4-5',
+  // Any Mastra model id, e.g. google/gemini-2.5-flash; defaults to Claude via OpenRouter
+  model: process.env.GUARDIAN_MODEL ?? 'openrouter/anthropic/claude-sonnet-4-5',
   tools: { analyzeSpendingVelocity, calculateRunway, generateFinancialInsight },
   memory: new Memory(),
 });

@@ -80,6 +80,9 @@ Generate a JSON response with:
       try {
         const response = await agent.generate([{ role: 'user', content: prompt }], {
           structuredOutput: { schema: insightSchema },
+          // The metrics are already computed above, so no tool calls are needed here.
+          // Gemini also rejects tools combined with structured output in one request.
+          toolChoice: 'none',
         });
 
         if (response.object) {

@@ -27,9 +27,13 @@ await runEvals({
   },
 });
 
-const avg = (key: 'severity' | 'grounding') => rows.reduce((sum, r) => sum + r[key], 0) / rows.length;
+const pct = (subset: Row[], key: 'severity' | 'grounding') =>
+  subset.length ? `${((subset.reduce((sum, r) => sum + r[key], 0) / subset.length) * 100).toFixed(1)}%` : 'n/a';
+
+// Rule-based outputs match the scorers by construction, so report LLM-generated outputs separately
+const llmRows = rows.filter((r) => r.source === 'llm');
 
 console.table(rows);
-console.log(`Scenarios: ${rows.length}`);
-console.log(`Severity accuracy: ${(avg('severity') * 100).toFixed(1)}%`);
-console.log(`Metric grounding:  ${(avg('grounding') * 100).toFixed(1)}%`);
+console.log(`Scenarios: ${rows.length} (LLM-generated: ${llmRows.length}, rule-based fallback: ${rows.length - llmRows.length})`);
+console.log(`All outputs   -> severity accuracy ${pct(rows, 'severity')}, metric grounding ${pct(rows, 'grounding')}`);
+console.log(`LLM outputs   -> severity accuracy ${pct(llmRows, 'severity')}, metric grounding ${pct(llmRows, 'grounding')}`);
