@@ -9,7 +9,8 @@
     "start": "mastra start",
     "example": "tsx --env-file-if-exists=.env src/scripts/run-example.ts",
     "eval": "tsx --env-file-if-exists=.env src/scripts/eval.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test test/*.test.ts"
   },
   "keywords": [],
   "author": "",

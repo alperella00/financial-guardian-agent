@@ -1,13 +1,16 @@
 import { createStep, createWorkflow } from '@mastra/core/workflows';
 import {
   buildDeterministicInsight,
+  composeInsight,
   computeRunway,
   computeVelocity,
   insightResultSchema,
-  insightSchema,
+  insightTextSchema,
   runwayResultSchema,
+  safeDailySpend,
   spendingProfileSchema,
   velocityResultSchema,
+  type InsightText,
   type SpendingProfile,
   type VelocityResult,
 } from '../lib/spending';
@@ -46,10 +49,15 @@ const generateInsightStep = createStep({
     const velocity = getStepResult('analyze-velocity') as VelocityResult;
     const initData = getInitData() as SpendingProfile;
 
+    // The verdict (severity + metrics) is decided by the rules first; the LLM only writes the wording
+    const rules = buildDeterministicInsight(velocity, runway, initData.monthlyBudget);
+    let text: InsightText | undefined;
+
     const agent = mastra?.getAgent('financialGuardian');
 
     if (agent) {
-      const prompt = `Analyze this financial situation and generate a proactive alert:
+      const prompt = `Write the text of a proactive spending alert. The severity is already decided: ${rules.severity.toUpperCase()}.
+Use only the figures below; do not invent or recompute other numbers.
 
 User's monthly budget: $${initData.monthlyBudget}
 Historical monthly average spending: $${initData.historicalMonthlyAverage}
@@ -69,31 +77,28 @@ RUNWAY ANALYSIS:
 - Days left in month: ${runway.daysLeftInMonth}
 - Will exceed budget: ${runway.willExceedBudget}
 - Projected month-end spend: $${runway.projectedMonthEndSpend}
+- Safe daily spend to stay within budget: $${safeDailySpend(runway).toFixed(2)}/day
 
 Generate a JSON response with:
-- severity: "info" | "warning" | "critical"
-- title: short alert title
+- title: short alert title matching the ${rules.severity} severity
 - message: detailed but concise explanation including the runway date
-- recommendations: array of 2-3 actionable suggestions
-- metrics: { velocityChangePercent, projectedDepletionDate, remainingBudget, dailyBurnRate } -- copy these values exactly from the analysis above`;
+- recommendations: array of 2-3 actionable suggestions`;
 
       try {
         const response = await agent.generate([{ role: 'user', content: prompt }], {
-          structuredOutput: { schema: insightSchema },
+          structuredOutput: { schema: insightTextSchema },
           // The metrics are already computed above, so no tool calls are needed here.
           // Gemini also rejects tools combined with structured output in one request.
           toolChoice: 'none',
         });
 
-        if (response.object) {
-          return { ...response.object, source: 'llm' as const };
-        }
+        text = response.object ?? undefined;
       } catch {
-        // Fall through to deterministic logic
+        // Keep the rule-based wording
       }
     }
 
-    return { ...buildDeterministicInsight(velocity, runway, initData.monthlyBudget), source: 'rules' as const };
+    return composeInsight(rules, text);
   },
 });
 

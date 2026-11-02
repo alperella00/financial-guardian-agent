@@ -5,12 +5,12 @@ import { LibSQLStore } from '@mastra/libsql';
 import { Observability, DefaultExporter, CloudExporter, SensitiveDataFilter } from '@mastra/observability';
 import { spendingAlertWorkflow } from './workflows/spending-alert-workflow';
 import { financialGuardian } from './agents/financial-guardian';
-import { severityAccuracyScorer, metricGroundingScorer } from './scorers/insight-scorers';
+import { severityAccuracyScorer, textGroundingScorer } from './scorers/insight-scorers';
 
 export const mastra = new Mastra({
   workflows: { spendingAlertWorkflow },
   agents: { financialGuardian },
-  scorers: { severityAccuracyScorer, metricGroundingScorer },
+  scorers: { severityAccuracyScorer, textGroundingScorer },
   storage: new LibSQLStore({
     id: "mastra-storage",
     // stores observability, scores, ... into persistent file storage
